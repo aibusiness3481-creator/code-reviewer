@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CodeReviewAI</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+.app { width: 100%; max-width: 1100px; background: #0d0d0f; border-radius: 12px; overflow: hidden; border: 0.5px solid #2a2a2e; }
+.topbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 0.5px solid #2a2a2e; background: #111114; }
+.logo { font-size: 14px; font-weight: 500; color: #e8e8f0; }
+.logo span { color: #7c6fe0; }
+.badge { font-size: 11px; padding: 2px 8px; background: #1e1b3a; color: #a89ff0; border-radius: 20px; border: 0.5px solid #3d3680; }
+.body { display: grid; grid-template-columns: 1fr 1fr; min-height: 520px; }
+.left-panel { display: flex; flex-direction: column; border-right: 0.5px solid #2a2a2e; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #111114; }
+.panel-title { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+.lang-select { font-size: 12px; background: #1a1a1e; color: #a0a0b0; border: 0.5px solid #2a2a2e; border-radius: 6px; padding: 4px 8px; }
+.editor-wrap { flex: 1; display: flex; overflow: hidden; }
+.line-numbers { padding: 16px 8px 16px 12px; background: #0a0a0c; color: #333; font-family: monospace; font-size: 13px; line-height: 1.6; text-align: right; user-select: none; min-width: 36px; border-right: 0.5px solid #1a1a1e; }
+.code-input { flex: 1; background: #0d0d0f; color: #c9d1d9; font-family: monospace; font-size: 13px; line-height: 1.6; border: none; outline: none; resize: none; padding: 16px; }
+.code-input::placeholder { color: #3a3a4a; }
+.run-btn { margin: 12px 16px; padding: 10px 0; background: #7c6fe0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.run-btn:hover { background: #9283f0; }
+.run-btn:disabled { background: #3a3460; color: #7070a0; cursor: not-allowed; }
+.right-panel { display: flex; flex-direction: column; overflow-y: auto; background: #0d0d0f; }
+.placeholder { flex: 1; display: flex; align-items: center; justify-content: center; }
+.placeholder p { font-size: 13px; color: #333; }
+.loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.spinner { width: 24px; height: 24px; border: 2px solid #2a2a2e; border-top-color: #7c6fe0; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading p { font-size: 13px; color: #555; }
+.result-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.grade-card { border-radius: 10px; border: 0.5px solid #2a2a2e; padding: 14px 16px; display: flex; align-items: center; gap: 16px; background: #111114; }
+.grade-circle { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500; flex-shrink: 0; }
+.grade-A { background: #0f2010; color: #60c060; border: 1.5px solid #1e4020; }
+.grade-B { background: #0e1a20; color: #60a0c0; border: 1.5px solid #1a3040; }
+.grade-C { background: #1e1510; color: #e0a040; border: 1.5px solid #3d2a10; }
+.grade-D { background: #1e1010; color: #f07070; border: 1.5px solid #3d1515; }
+.grade-label { font-size: 13px; font-weight: 500; color: #e0e0e0; margin-bottom: 4px; }
+.score-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.score-pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.score-pill.good { background: #0f2010; color: #60c060; border: 0.5px solid #1e4020; }
+.score-pill.warn { background: #1e1510; color: #e0a040; border: 0.5px solid #3d2a10; }
+.score-pill.bad { background: #1e1010; color: #f07070; border: 0.5px solid #3d1515; }
+.section { border-radius: 8px; overflow: hidden; border: 0.5px solid #2a2a2e; }
+.section-head { padding: 8px 12px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.section-body { padding: 12px; font-size: 13px; line-height: 1.6; color: #b0b0c0; }
+.bugs .section-head { background: #1e1212; color: #f07070; }
+.security .section-head { background: #1a1510; color: #e0a040; }
+.perf .section-head { background: #0f1a10; color: #60c060; }
+.fixed-head { padding: 8px 12px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; background: #111220; color: #7c6fe0; }
+.copy-btn { font-size: 11px; padding: 3px 10px; background: #1e1b3a; color: #a89ff0; border: 0.5px solid #3d3680; border-radius: 6px; cursor: pointer; }
+.copy-btn:hover { background: #2a2550; }
+.fixed-body { padding: 12px; font-family: monospace; font-size: 12px; background: #111114; color: #c9d1d9; white-space: pre-wrap; word-break: break-word; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.dot-red { background: #f07070; } .dot-amber { background: #e0a040; } .dot-green { background: #60c060; } .dot-purple { background: #7c6fe0; }
+.history-bar { border-top: 0.5px solid #2a2a2e; background: #0a0a0c; }
+.history-title { padding: 8px 16px; font-size: 11px; color: #444; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 0.5px solid #1a1a1e; }
+.history-list { display: flex; flex-direction: column; max-height: 140px; overflow-y: auto; }
+.history-item { padding: 8px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 0.5px solid #1a1a1e; }
+.history-item:hover { background: #111114; }
+.history-grade { font-size: 12px; font-weight: 500; width: 20px; }
+.history-snippet { font-size: 12px; color: #555; font-family: monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-time { font-size: 11px; color: #333; }
+.empty-history { padding: 12px 16px; font-size: 12px; color: #333; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo"><span>&#123;&#125;</span> CodeReview<span>AI</span></div>
+    <div class="badge">powered by Claude</div>
+  </div>
+  <div class="body">
+    <div class="left-panel">
+      <div class="panel-header">
+        <span class="panel-title">Your code</span>
+        <select class="lang-select" id="lang">
+          <option>Auto-detect</option>
+          <option>Python</option>
+          <option>JavaScript</option>
+          <option>TypeScript</option>
+          <option>Java</option>
+          <option>Go</option>
+          <option>Rust</option>
+          <option>C++</option>
+        </select>
+      </div>
+      <div class="editor-wrap">
+        <div class="line-numbers" id="lineNumbers">1</div>
+        <textarea class="code-input" id="codeInput" placeholder="Paste your code here..." oninput="updateLines()"></textarea>
+      </div>
+      <button class="run-btn" id="reviewBtn" onclick="runReview()">Review my code ↗</button>
+    </div>
+    <div class="right-panel">
+      <div class="panel-header">
+        <span class="panel-title">Review</span>
+        <span id="statusBadge" style="font-size:11px;color:#444;"></span>
+      </div>
+      <div id="outputBody" style="flex:1;display:flex;flex-direction:column;">
+        <div class="placeholder"><p>Paste code and click review</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="history-bar">
+    <div class="history-title">Review history</div>
+    <div class="history-list" id="historyList">
+      <div class="empty-history">No reviews yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let history = [];
+
+function updateLines() {
+  const ta = document.getElementById('codeInput');
+  const ln = document.getElementById('lineNumbers');
+  const lines = ta.value.split('\n').length;
+  ln.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
+}
+
+function getGrade(scores) {
+  const s = Object.values(scores);
+  const bad = s.filter(x => x === 'bad').length;
+  const warn = s.filter(x => x === 'warn').length;
+  if (bad >= 2) return 'D';
+  if (bad === 1) return 'C';
+  if (warn >= 2) return 'C';
+  if (warn === 1) return 'B';
+  return 'A';
+}
+
+function getGradeLabel(g) {
+  if (g === 'A') return 'Excellent — clean code!';
+  if (g === 'B') return 'Good — minor issues found';
+  if (g === 'C') return 'Fair — needs some work';
+  return 'Poor — significant issues';
+}
+
+function copyCode(id) {
+  const el = document.getElementById(id);
+  navigator.clipboard.writeText(el.innerText).then(() => {
+    const btn = document.querySelector(`[onclick="copyCode('${id}')"]`);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (history.length === 0) { el.innerHTML = '<div class="empty-history">No reviews yet</div>'; return; }
+  el.innerHTML = history.slice().reverse().map((h, i) => `
+    <div class="history-item" onclick="loadHistory(${history.length - 1 - i})">
+      <span class="history-grade" style="color:${h.grade==='A'?'#60c060':h.grade==='B'?'#60a0c0':h.grade==='C'?'#e0a040':'#f07070'}">${h.grade}</span>
+      <span class="history-snippet">${h.snippet}</span>
+      <span class="history-time">${h.time}</span>
+    </div>`).join('');
+}
+
+function loadHistory(i) {
+  const h = history[i];
+  document.getElementById('codeInput').value = h.code;
+  updateLines();
+  renderResult(h.result);
+}
+
+function renderResult(result) {
+  const grade = getGrade(result.scores);
+  const sc = s => s === 'good' ? 'good' : s === 'warn' ? 'warn' : 'bad';
+  const sl = (s, l) => `<span class="score-pill ${sc(s)}">${l}: ${s==='good'?'ok':s==='warn'?'warning':'issue'}</span>`;
+  const fixedId = 'fixed_' + Date.now();
+  document.getElementById('outputBody').innerHTML = `
+    <div class="result-body">
+      <div class="grade-card">
+        <div class="grade-circle grade-${grade}">${grade}</div>
+        <div class="grade-info">
+          <div class="grade-label">${getGradeLabel(grade)}</div>
+          <div class="score-row">${sl(result.scores.bugs,'Bugs')}${sl(result.scores.security,'Security')}${sl(result.scores.performance,'Performance')}</div>
+        </div>
+      </div>
+      <div class="section bugs"><div class="section-head"><span class="dot dot-red"></span>Bugs</div><div class="section-body">${result.bugs}</div></div>
+      <div class="section security"><div class="section-head"><span class="dot dot-amber"></span>Security</div><div class="section-body">${result.security}</div></div>
+      <div class="section perf"><div class="section-head"><span class="dot dot-green"></span>Performance</div><div class="section-body">${result.performance}</div></div>
+      <div class="section">
+        <div class="fixed-head"><span style="display:flex;align-items:center;gap:6px;"><span class="dot dot-purple"></span>Fixed code</span><button class="copy-btn" onclick="copyCode('${fixedId}')">Copy</button></div>
+        <div class="fixed-body" id="${fixedId}">${result.fixed.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      </div>
+    </div>`;
+  document.getElementById('statusBadge').textContent = 'Grade: ' + grade;
+  document.getElementById('statusBadge').style.color = grade==='A'?'#60c060':grade==='B'?'#60a0c0':grade==='C'?'#e0a040':'#f07070';
+}
+
+async function runReview() {
+  const code = document.getElementById('codeInput').value.trim();
+  const lang = document.getElementById('lang').value;
+  const btn = document.getElementById('reviewBtn');
+
+  if (!code) { alert('Paste some code first!'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Reviewing...';
+  document.getElementById('outputBody').innerHTML = '<div class="loading"><div class="spinner"></div><p>Analyzing your code...</p></div>';
+
+  try {
+    const res = await fetch('/api/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, lang })
+    });
+    const result = await res.json();
+    if (result.error) throw new Error(result.error);
+
+    renderResult(result);
+    const grade = getGrade(result.scores);
+    history.push({ code, result, grade, snippet: code.split('\n')[0].slice(0, 40), time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+    renderHistory();
+  } catch(e) {
+    document.getElementById('outputBody').innerHTML = `<div class="placeholder"><p style="color:#f07070;">Error: ${e.message}</p></div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Review my code ↗';
+}
+</script>
+</body>
+</html>
