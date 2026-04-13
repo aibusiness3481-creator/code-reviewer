@@ -185,39 +185,73 @@ const LANGUAGES = [
   {name:'SQL',tag:'Database'},{name:'HTML/CSS',tag:'Frontend'},{name:'Bash/Shell',tag:'DevOps'},
 ];
 
-let selectedLang='Auto-detect', mode='fix', reviewHistory=[];
+let selectedLang='Auto-detect', mode='fix', reviewHistory=[], showingVariations=false, currentBase='';
+
+const BASE_LANGS=['Python','JavaScript','TypeScript','Lua','Java','C++','C#','Swift','Kotlin','Go','Rust','PHP','Ruby','SQL','HTML/CSS','Bash/Shell'];
+
+function getBase(name){ return BASE_LANGS.find(b=>name.startsWith(b))||name; }
 
 function openDropdown(){
+  showingVariations=false;
+  currentBase='';
   document.getElementById('langSearch').value='';
   document.getElementById('langSearch').placeholder='Search language...';
-  filterLangs();
+  renderDropdown();
   document.getElementById('langDropdown').classList.add('open');
 }
 function closeDropdown(){document.getElementById('langDropdown').classList.remove('open');}
-function filterLangs(){
-  const q=document.getElementById('langSearch').value.toLowerCase().trim();
+
+function renderDropdown(){
   const dd=document.getElementById('langDropdown');
-  let filtered;
-  if(!q){
-    filtered=LANGUAGES;
-  } else {
-    filtered=LANGUAGES.filter(l=>{
-      const name=l.name.toLowerCase();
-      if(q==='java') return name.startsWith('java') && !name.startsWith('javascript');
-      if(q==='javascript' || q==='js') return name.startsWith('javascript');
-      if(q==='lua') return name.startsWith('lua');
-      if(q==='c#') return name.startsWith('c#');
-      if(q==='c++') return name.startsWith('c++');
-      return name.includes(q);
-    });
+  const q=document.getElementById('langSearch').value.toLowerCase().trim();
+
+  if(showingVariations){
+    const variations=LANGUAGES.filter(l=>getBase(l.name)===currentBase);
+    dd.innerHTML=`<div class="lang-option" style="color:#7c6fe0;border-bottom:0.5px solid #2a2a2e;" onmousedown="showAllLangs()">← All languages</div>`+
+      variations.map(l=>`<div class="lang-option ${selectedLang===l.name?'selected':''}" onmousedown="selectLang('${l.name}','${l.name}')"><span>${l.name}</span><span class="tag">${l.tag}</span></div>`).join('');
+    return;
   }
-  const backBtn=selectedLang!=='Auto-detect'?`<div class="lang-option" style="color:#7c6fe0;border-bottom:0.5px solid #2a2a2e;" onmousedown="selectLang('Auto-detect','Auto-detect')">← All languages</div>`:'';
-  dd.innerHTML=backBtn+`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
-    filtered.map(l=>`<div class="lang-option ${selectedLang===l.name?'selected':''}" onmousedown="selectLang('${l.name}','${l.name}')"><span>${l.name}</span><span class="tag">${l.tag}</span></div>`).join('');
-  dd.classList.add('open');
+
+  if(q){
+    const filtered=LANGUAGES.filter(l=>l.name.toLowerCase().includes(q));
+    dd.innerHTML=`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
+      filtered.map(l=>`<div class="lang-option ${selectedLang===l.name?'selected':''}" onmousedown="selectLang('${l.name}','${l.name}')"><span>${l.name}</span><span class="tag">${l.tag}</span></div>`).join('');
+    return;
+  }
+
+  const bases=BASE_LANGS.filter(b=>LANGUAGES.some(l=>getBase(l.name)===b));
+  dd.innerHTML=`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
+    bases.map(b=>{
+      const vars=LANGUAGES.filter(l=>getBase(l.name)===b);
+      const hasVars=vars.length>1;
+      return `<div class="lang-option" onmousedown="${hasVars?`showVariations('${b}')`:`selectLang('${vars[0].name}','${vars[0].name}')`}">
+        <span>${b}</span>
+        ${hasVars?`<span class="tag">${vars.length} variants →</span>`:`<span class="tag">${vars[0].tag}</span>`}
+      </div>`;
+    }).join('');
 }
+
+function showVariations(base){
+  showingVariations=true;
+  currentBase=base;
+  renderDropdown();
+}
+
+function showAllLangs(){
+  showingVariations=false;
+  currentBase='';
+  document.getElementById('langSearch').value='';
+  renderDropdown();
+}
+
+function filterLangs(){
+  renderDropdown();
+  document.getElementById('langDropdown').classList.add('open');
+}
+
 function selectLang(name,display){
   selectedLang=name;
+  showingVariations=false;
   document.getElementById('langSearch').value=name==='Auto-detect'?'Auto-detect':display;
   document.getElementById('langSearch').placeholder=name==='Auto-detect'?'Auto-detect':display;
   closeDropdown();
