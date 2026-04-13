@@ -5,6 +5,9 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  console.log('Request body:', JSON.stringify(req.body));
+  console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+
   const { code, lang, mode } = req.body;
   if (!code) return res.status(400).json({ error: 'No code provided' });
 
@@ -17,6 +20,7 @@ ${code}
 \`\`\``;
 
   try {
+    console.log('Calling Anthropic API...');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -30,12 +34,15 @@ ${code}
         messages: [{ role: 'user', content: prompt }]
       })
     });
+    console.log('Anthropic status:', response.status);
     const data = await response.json();
+    console.log('Anthropic response:', JSON.stringify(data));
     if (data.error) return res.status(400).json({ error: data.error.message });
     const text = data.content.map(i => i.text || '').join('');
     const result = JSON.parse(text.replace(/```json|```/g, '').trim());
     res.status(200).json(result);
   } catch (e) {
+    console.log('Caught error:', e.message);
     res.status(500).json({ error: e.message });
   }
 }
