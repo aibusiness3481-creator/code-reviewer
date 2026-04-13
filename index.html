@@ -187,7 +187,12 @@ const LANGUAGES = [
 
 let selectedLang='Auto-detect', mode='fix', reviewHistory=[];
 
-function openDropdown(){filterLangs();document.getElementById('langDropdown').classList.add('open');}
+function openDropdown(){
+  document.getElementById('langSearch').value='';
+  document.getElementById('langSearch').placeholder='Search language...';
+  filterLangs();
+  document.getElementById('langDropdown').classList.add('open');
+}
 function closeDropdown(){document.getElementById('langDropdown').classList.remove('open');}
 function filterLangs(){
   const q=document.getElementById('langSearch').value.toLowerCase();
