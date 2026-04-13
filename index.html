@@ -9,10 +9,10 @@
 body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
 .app-wrap { position: relative; width: 100%; max-width: 1100px; }
 .app { background: #0d0d0f; border-radius: 12px; overflow: hidden; border: 0.5px solid #2a2a2e; }
-.topbar { display: flex; align-items: center; gap: 0px; padding: 14px 20px; border-bottom: 0.5px solid #2a2a2e; background: #111114; }
+.topbar { display: flex; align-items: center; gap: 0px; padding: 8px 20px; border-bottom: 0.5px solid #2a2a2e; background: #111114; }
 .logo { font-size: 14px; font-weight: 500; color: #e8e8f0; }
 .logo span { color: #7c6fe0; }
-.badge { font-size: 11px; padding: 2px 8px; background: #1e1b3a; color: #a89ff0; border-radius: 20px; border: 0.5px solid #3d3680; margin-right: auto; }
+.badge { font-size: 11px; padding: 2px 8px; background: #1e1b3a; color: #a89ff0; border-radius: 20px; border: 0.5px solid #3d3680; }
 
 .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #0f0f12; flex-wrap: wrap; }
 .lang-wrap { position: relative; flex: 1; min-width: 180px; }
@@ -105,7 +105,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 <div class="app-wrap">
 <div class="app">
   <div class="topbar">
-    <svg width="200" height="46" viewBox="0 0 160 56" xmlns="http://www.w3.org/2000/svg" style="margin-right: 10px;">
+    <svg width="240" height="46" viewBox="0 0 200 56" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
       <rect x="2" y="8" width="52" height="40" rx="8" fill="#0d0d0f" stroke="#7c6fe0" stroke-width="1.5"/>
       <circle cx="12" cy="17" r="2.5" fill="#f07070"/>
       <circle cx="20" cy="17" r="2.5" fill="#e0a040"/>
@@ -297,9 +297,8 @@ async function runReview(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({code,lang:selectedLang,mode})
     });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
-    const result=JSON.parse(data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim());
+    const result=await res.json();
+    if(result.error)throw new Error(result.error);
     renderResult(result,code);
     const grade=getGrade(result.scores);
     reviewHistory.push({code,result,grade,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
