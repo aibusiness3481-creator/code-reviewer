@@ -203,10 +203,13 @@ function filterLangs(){
   } else {
     filtered=LANGUAGES.filter(l=>{
       const name=l.name.toLowerCase();
-      const words=name.replace(/[()]/g,' ').split(/\s+/).filter(Boolean);
-      return words.some(w=>w===q||w.startsWith(q));
+      if(q==='java') return name.startsWith('java') && !name.startsWith('javascript');
+      if(q==='javascript' || q==='js') return name.startsWith('javascript');
+      if(q==='lua') return name.startsWith('lua');
+      if(q==='c#') return name.startsWith('c#');
+      if(q==='c++') return name.startsWith('c++');
+      return name.includes(q);
     });
-    if(!filtered.length) filtered=LANGUAGES.filter(l=>l.name.toLowerCase().includes(q));
   }
   const backBtn=selectedLang!=='Auto-detect'?`<div class="lang-option" style="color:#7c6fe0;border-bottom:0.5px solid #2a2a2e;" onmousedown="selectLang('Auto-detect','Auto-detect')">← All languages</div>`:'';
   dd.innerHTML=backBtn+`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
