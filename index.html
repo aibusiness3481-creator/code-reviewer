@@ -13,10 +13,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 .logo { font-size: 14px; font-weight: 500; color: #e8e8f0; }
 .logo span { color: #7c6fe0; }
 .badge { font-size: 11px; padding: 2px 8px; background: #1e1b3a; color: #a89ff0; border-radius: 20px; border: 0.5px solid #3d3680; margin-right: auto; }
-.key-bar { padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #0f0f12; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.key-bar label { font-size: 12px; color: #555; white-space: nowrap; }
-.key-input { flex: 1; min-width: 200px; background: #1a1a1e; color: #a0a0b0; border: 0.5px solid #2a2a2e; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-family: monospace; outline: none; }
-.key-input:focus { border-color: #7c6fe0; }
+
 .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #0f0f12; flex-wrap: wrap; }
 .lang-wrap { position: relative; flex: 1; min-width: 180px; }
 .lang-search { width: 100%; background: #1a1a1e; color: #c9d1d9; border: 0.5px solid #2a2a2e; border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; }
@@ -110,10 +107,6 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
   <div class="topbar">
     <div class="logo"><span>{}</span> CodeReview<span>AI</span></div>
     <div class="badge">powered by Claude</div>
-  </div>
-  <div class="key-bar">
-    <label>API Key</label>
-    <input class="key-input" id="apiKey" type="password" placeholder="Paste your Anthropic API key (sk-ant-...)" />
   </div>
   <div class="toolbar">
     <div class="lang-wrap">
@@ -286,24 +279,15 @@ function renderResult(result,originalCode){
 }
 async function runReview(){
   const code=document.getElementById('codeInput').value.trim();
-  const apiKey=document.getElementById('apiKey').value.trim();
   const btn=document.getElementById('reviewBtn');
   if(!code){alert('Paste some code first!');return;}
-  if(!apiKey){alert('Enter your API key first!');return;}
   btn.disabled=true;btn.textContent='Reviewing...';
   document.getElementById('outputBody').innerHTML='<div class="loading"><div class="spinner"></div><p>Analyzing your code...</p></div>';
-  const teachExtra=mode==='teach'?',"explanation":"plain English explanation of all issues and why they matter, 3-5 sentences"':'';
-  const prompt=`You are an expert code reviewer. Review the following ${selectedLang==='Auto-detect'?'':selectedLang} code and respond ONLY with a JSON object (no markdown, no backticks):
-{"bugs":"1-2 sentences or No bugs found.","security":"1-2 sentences or No security issues.","performance":"1-2 sentences or Looks good.","fixed":"full corrected code"${teachExtra},"scores":{"bugs":"good|warn|bad","security":"good|warn|bad","performance":"good|warn|bad"}}
-Code:
-\`\`\`
-${code}
-\`\`\``;
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/review',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code,lang:selectedLang,mode})
     });
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
