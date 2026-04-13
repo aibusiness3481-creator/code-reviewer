@@ -195,9 +195,19 @@ function openDropdown(){
 }
 function closeDropdown(){document.getElementById('langDropdown').classList.remove('open');}
 function filterLangs(){
-  const q=document.getElementById('langSearch').value.toLowerCase();
+  const q=document.getElementById('langSearch').value.toLowerCase().trim();
   const dd=document.getElementById('langDropdown');
-  const filtered=q?LANGUAGES.filter(l=>l.name.toLowerCase().includes(q)):LANGUAGES;
+  let filtered;
+  if(!q){
+    filtered=LANGUAGES;
+  } else {
+    filtered=LANGUAGES.filter(l=>{
+      const name=l.name.toLowerCase();
+      const words=name.replace(/[()]/g,' ').split(/\s+/).filter(Boolean);
+      return words.some(w=>w===q||w.startsWith(q));
+    });
+    if(!filtered.length) filtered=LANGUAGES.filter(l=>l.name.toLowerCase().includes(q));
+  }
   const backBtn=selectedLang!=='Auto-detect'?`<div class="lang-option" style="color:#7c6fe0;border-bottom:0.5px solid #2a2a2e;" onmousedown="selectLang('Auto-detect','Auto-detect')">← All languages</div>`:'';
   dd.innerHTML=backBtn+`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
     filtered.map(l=>`<div class="lang-option ${selectedLang===l.name?'selected':''}" onmousedown="selectLang('${l.name}','${l.name}')"><span>${l.name}</span><span class="tag">${l.tag}</span></div>`).join('');
