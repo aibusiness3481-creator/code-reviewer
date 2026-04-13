@@ -193,14 +193,15 @@ function filterLangs(){
   const q=document.getElementById('langSearch').value.toLowerCase();
   const dd=document.getElementById('langDropdown');
   const filtered=q?LANGUAGES.filter(l=>l.name.toLowerCase().includes(q)):LANGUAGES;
-  dd.innerHTML=`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
+  const backBtn=selectedLang!=='Auto-detect'?`<div class="lang-option" style="color:#7c6fe0;border-bottom:0.5px solid #2a2a2e;" onmousedown="selectLang('Auto-detect','Auto-detect')">← All languages</div>`:'';
+  dd.innerHTML=backBtn+`<div class="lang-option ${selectedLang==='Auto-detect'?'selected':''}" onmousedown="selectLang('Auto-detect','Auto-detect')">Auto-detect</div>`+
     filtered.map(l=>`<div class="lang-option ${selectedLang===l.name?'selected':''}" onmousedown="selectLang('${l.name}','${l.name}')"><span>${l.name}</span><span class="tag">${l.tag}</span></div>`).join('');
   dd.classList.add('open');
 }
 function selectLang(name,display){
   selectedLang=name;
-  document.getElementById('langSearch').value=display==='Auto-detect'?'':display;
-  document.getElementById('langSearch').placeholder=display==='Auto-detect'?'Search language...':display;
+  document.getElementById('langSearch').value=name==='Auto-detect'?'Auto-detect':display;
+  document.getElementById('langSearch').placeholder=name==='Auto-detect'?'Auto-detect':display;
   closeDropdown();
 }
 function setMode(m){
