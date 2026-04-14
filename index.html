@@ -119,7 +119,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
   </div>
   <div class="toolbar">
     <div class="lang-wrap">
-      <input class="lang-search" id="langSearch" placeholder="Search language... (e.g. python, react, roblox)" autocomplete="off" onfocus="openDropdown()" oninput="filterLangs()" onblur="setTimeout(closeDropdown, 400)" />
+      <input class="lang-search" id="langSearch" placeholder="Search language... (e.g. python, react, roblox)" autocomplete="off" onfocus="openDropdown()" oninput="filterLangs()" onblur="" />
       <div class="lang-dropdown" id="langDropdown"></div>
     </div>
     <div class="mode-toggle">
@@ -374,7 +374,11 @@ function openModal(type){
   document.getElementById('modalBg').classList.add('open');
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('open');}
-updateLines();filterLangs();
+updateLines();renderDropdown();
+document.addEventListener('click', function(e){
+  const wrap = document.querySelector('.lang-wrap');
+  if(wrap && !wrap.contains(e.target)) closeDropdown();
+});
 </script>
 </body>
 </html>
