@@ -24,18 +24,18 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 .lang-option:hover, .lang-option.selected { background: #2a2550; color: #c9d1d9; }
 .lang-option .tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; background: #1e1b3a; color: #7c6fe0; }
 
-.body { display: grid; grid-template-columns: 1fr 1fr; min-height: 480px; }
+.body { display: grid; grid-template-columns: 1fr 1fr; min-height: unset; }
 .left-panel { display: flex; flex-direction: column; border-right: 0.5px solid #2a2a2e; }
 .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #111114; }
 .panel-title { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
-.editor-wrap { flex: 1; display: flex; overflow: hidden; min-height: 200px; }
+.editor-wrap { flex: 1; display: flex; overflow: hidden; min-height: calc(100vh - 280px); max-height: calc(100vh - 280px); }
 .line-numbers { padding: 16px 8px 16px 12px; background: #0a0a0c; color: #333; font-family: monospace; font-size: 13px; line-height: 1.6; text-align: right; user-select: none; min-width: 36px; border-right: 0.5px solid #1a1a1e; }
 .code-input { flex: 1; background: #0d0d0f; color: #c9d1d9; font-family: monospace; font-size: 13px; line-height: 1.6; border: none; outline: none; resize: none; padding: 16px; }
 .code-input::placeholder { color: #3a3a4a; }
 .run-btn { margin: 12px 16px; padding: 10px 0; background: #7c6fe0; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
 .run-btn:hover { background: #9283f0; }
 .run-btn:disabled { background: #3a3460; color: #7070a0; cursor: not-allowed; }
-.right-panel { display: flex; flex-direction: column; overflow-y: auto; background: #0d0d0f; min-height: 300px; }
+.right-panel { display: flex; flex-direction: column; overflow-y: auto; background: #0d0d0f; min-height: unset; }
 .placeholder { flex: 1; display: flex; align-items: center; justify-content: center; }
 .placeholder p { font-size: 13px; color: #333; }
 .loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
@@ -158,9 +158,9 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <circle cx="29" cy="28" r="5" fill="#a89ff0"/>
       <line x1="13" y1="16" x2="29" y2="28" stroke="#7c6fe0" stroke-width="1.5" stroke-dasharray="3,2"/>
     </svg>
-    <button class="run-btn" id="reviewBtn" onclick="runReview()" style="margin:0;width:320px;">Simulate Merge</button>
+    <button class="run-btn" id="reviewBtn" onclick="runReview()" style="margin:0;width:calc(50% + 115px);padding:14px 0;font-size:15px;">Simulate Merge</button>
   </div>
-  <div style="border-top:0.5px solid #2a2a2e;">
+  <div style="border-top:0.5px solid #2a2a2e;" id="reportSection" style="display:none;">
     <div class="panel-header">
       <span class="panel-title">Simulation Report</span>
       <span id="statusBadge" style="font-size:11px;color:#444;"></span>
@@ -169,7 +169,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <div class="placeholder"><p>Paste both code branches and click Simulate Merge</p></div>
     </div>
   </div>
-  <div class="history-bar">
+  <div class="history-bar" id="historySection" style="display:none;">
     <div class="history-title">Review history</div>
     <div class="history-list" id="historyList">
       <div class="empty-history">No reviews yet</div>
@@ -392,6 +392,7 @@ async function runReview(){
   if(!code){alert('Paste your main branch code first!');return;}
   if(!prCode){alert('Paste your PR code first!');return;}
   btn.disabled=true;btn.textContent='Simulating...';
+  document.getElementById('reportSection').style.display='block';
   document.getElementById('outputBody').innerHTML='<div class="loading"><div class="spinner"></div><p>Simulating merge...</p></div>';
   try{
     const res=await fetch('/api/review',{
@@ -402,6 +403,8 @@ async function runReview(){
     const result=await res.json();
     if(result.error)throw new Error(result.error);
     renderResult(result,code);
+    document.getElementById('reportSection').style.display='block';
+    document.getElementById('historySection').style.display='block';
     const grade=getGrade(result.scores);
     reviewHistory.push({code,result,grade,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
     renderHistory();
