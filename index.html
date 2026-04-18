@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CodeReviewAI</title>
+<title>MergeSense</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
@@ -23,11 +23,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 .lang-option { padding: 7px 10px; font-size: 12px; color: #a0a0b0; cursor: pointer; }
 .lang-option:hover, .lang-option.selected { background: #2a2550; color: #c9d1d9; }
 .lang-option .tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; background: #1e1b3a; color: #7c6fe0; }
-.mode-toggle { display: flex; border: 0.5px solid #2a2a2e; border-radius: 6px; overflow: hidden; }
-.mode-btn { padding: 6px 12px; font-size: 12px; background: #1a1a1e; color: #666; border: none; cursor: pointer; }
-.mode-btn.active { background: #7c6fe0; color: #fff; }
-.credit-counter { font-size: 12px; color: #555; white-space: nowrap; margin-left: auto; }
-.credit-counter span { color: #7c6fe0; font-weight: 500; }
+
 .body { display: grid; grid-template-columns: 1fr 1fr; min-height: 480px; }
 .left-panel { display: flex; flex-direction: column; border-right: 0.5px solid #2a2a2e; }
 .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #111114; }
@@ -88,7 +84,21 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 .tos-bar { border-top: 0.5px solid #2a2a2e; padding: 10px 16px; background: #0a0a0c; display: flex; align-items: center; justify-content: center; gap: 16px; }
 .tos-link { font-size: 11px; color: #333; cursor: pointer; text-decoration: underline; }
 .tos-link:hover { color: #666; }
-.modal-bg { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; }
+.risk-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
+.risk-low { background: #0f2010; color: #60c060; border: 0.5px solid #1e4020; }
+.risk-medium { background: #1e1510; color: #e0a040; border: 0.5px solid #3d2a10; }
+.risk-high { background: #1e1010; color: #f07070; border: 0.5px solid #3d1515; }
+.risk-critical { background: #2a0a0a; color: #ff4444; border: 0.5px solid #5a1010; }
+.collapsible-head { cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+.collapsible-head:hover { opacity: 0.85; }
+.collapse-icon { font-size: 10px; color: #555; transition: transform 0.2s; }
+.collapse-icon.open { transform: rotate(180deg); }
+.collapsible-body { display: none; }
+.collapsible-body.open { display: block; }
+.priority-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-weight: 600; }
+.p0-tag { background: #2a0a0a; color: #ff4444; }
+.p1-tag { background: #1e1510; color: #e0a040; }
+.p2-tag { background: #0f1a10; color: #60c060; }
 .modal-bg.open { display: flex; }
 .modal { background: #111114; border: 0.5px solid #2a2a2e; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 70vh; overflow-y: auto; }
 .modal h2 { font-size: 15px; color: #e0e0e0; margin-bottom: 12px; font-weight: 500; }
@@ -106,14 +116,12 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 <div class="app">
   <div class="topbar">
     <svg width="200" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg" style="margin-right:10px;">
-      <rect x="1" y="4" width="80" height="42" rx="8" fill="#0d0d0f" stroke="#7c6fe0" stroke-width="1.5"/>
-      <circle cx="12" cy="14" r="2.5" fill="#f07070"/>
-      <circle cx="22" cy="14" r="2.5" fill="#e0a040"/>
-      <circle cx="32" cy="14" r="2.5" fill="#60c060"/>
-      <text x="16" y="34" font-family="monospace" font-size="12" fill="#7c6fe0">_ review</text>
-      <text x="76" y="42" font-family="monospace" font-size="14" font-weight="700" fill="#a89ff0">()</text>
-      <text x="84" y="30" font-family="system-ui" font-size="18" font-weight="500" fill="#e8e8f0">CodeReview</text>
-      <text x="84" y="50" font-family="system-ui" font-size="20" font-weight="700" fill="#a89ff0">AI</text>
+      <rect x="1" y="4" width="42" height="42" rx="8" fill="#1e1b3a" stroke="#7c6fe0" stroke-width="1.5"/>
+      <circle cx="14" cy="20" r="5" fill="#7c6fe0"/>
+      <circle cx="30" cy="32" r="5" fill="#a89ff0"/>
+      <line x1="14" y1="20" x2="30" y2="32" stroke="#7c6fe0" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <text x="52" y="26" font-family="system-ui" font-size="18" font-weight="500" fill="#e8e8f0">MergeSense</text>
+      <text x="52" y="44" font-family="system-ui" font-size="11" font-weight="400" fill="#555">pre-merge AI</text>
     </svg>
     <div class="badge">powered by Claude</div>
   </div>
@@ -122,32 +130,43 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <input class="lang-search" id="langSearch" placeholder="Search language... (e.g. python, react, roblox)" autocomplete="off" onfocus="openDropdown()" oninput="filterLangs()" onblur="" />
       <div class="lang-dropdown" id="langDropdown"></div>
     </div>
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="modeFixBtn" onclick="setMode('fix')">Fix it</button>
-      <button class="mode-btn" id="modeTeachBtn" onclick="setMode('teach')">Teach me</button>
-    </div>
-    <div class="credit-counter">Cost: <span id="creditCost">0</span> credits</div>
   </div>
   <div class="body">
     <div class="left-panel">
       <div class="panel-header">
-        <span class="panel-title">Your code</span>
+        <span class="panel-title">Main Branch</span>
         <span id="lineCount" style="font-size:11px;color:#444;">0 lines</span>
       </div>
       <div class="editor-wrap">
         <div class="line-numbers" id="lineNumbers">1</div>
-        <textarea class="code-input" id="codeInput" placeholder="Paste your code here..." oninput="updateLines()"></textarea>
+        <textarea class="code-input" id="codeInput" placeholder="Paste your main branch code here..." oninput="updateLines()"></textarea>
       </div>
-      <button class="run-btn" id="reviewBtn" onclick="runReview()">Review my code</button>
     </div>
-    <div class="right-panel">
+    <div class="right-panel" style="border-right:0.5px solid #2a2a2e;">
       <div class="panel-header">
-        <span class="panel-title">Review</span>
-        <span id="statusBadge" style="font-size:11px;color:#444;"></span>
+        <span class="panel-title">Pull Request</span>
       </div>
-      <div id="outputBody" style="flex:1;display:flex;flex-direction:column;">
-        <div class="placeholder"><p>Paste code and click review</p></div>
+      <div class="editor-wrap">
+        <textarea class="code-input" id="prInput" placeholder="Paste your PR code here..."></textarea>
       </div>
+    </div>
+  </div>
+  <div style="padding:12px 16px;border-top:0.5px solid #2a2a2e;background:#0d0d0f;display:flex;align-items:center;justify-content:center;gap:10px;">
+    <svg width="28" height="28" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+      <rect x="1" y="1" width="40" height="40" rx="8" fill="#1e1b3a" stroke="#7c6fe0" stroke-width="1.5"/>
+      <circle cx="13" cy="16" r="5" fill="#7c6fe0"/>
+      <circle cx="29" cy="28" r="5" fill="#a89ff0"/>
+      <line x1="13" y1="16" x2="29" y2="28" stroke="#7c6fe0" stroke-width="1.5" stroke-dasharray="3,2"/>
+    </svg>
+    <button class="run-btn" id="reviewBtn" onclick="runReview()" style="margin:0;width:320px;">Simulate Merge</button>
+  </div>
+  <div style="border-top:0.5px solid #2a2a2e;">
+    <div class="panel-header">
+      <span class="panel-title">Simulation Report</span>
+      <span id="statusBadge" style="font-size:11px;color:#444;"></span>
+    </div>
+    <div id="outputBody" style="min-height:200px;display:flex;flex-direction:column;background:#0d0d0f;border:0.5px solid #2a2a2e;border-radius:10px;margin:12px 16px;">
+      <div class="placeholder"><p>Paste both code branches and click Simulate Merge</p></div>
     </div>
   </div>
   <div class="history-bar">
@@ -162,11 +181,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
     <span class="tos-link" onclick="openModal('cookies')">Cookie Policy</span>
   </div>
 </div>
-<div class="modal-bg" id="modalBg">
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h2 id="modalTitle"></h2>
     <div id="modalContent"></div>
-    <button class="modal-close" onclick="closeModal()">Close</button>
   </div>
 </div>
 </div>
@@ -185,7 +203,7 @@ const LANGUAGES = [
   {name:'SQL',tag:'Database'},{name:'HTML/CSS',tag:'Frontend'},{name:'Bash/Shell',tag:'DevOps'},
 ];
 
-let selectedLang='Auto-detect', mode='fix', reviewHistory=[], showingVariations=false, currentBase='';
+let selectedLang='Auto-detect', reviewHistory=[], showingVariations=false, currentBase='';
 
 const BASE_LANGS=['Python','JavaScript','TypeScript','Lua','Java','C++','C#','Swift','Kotlin','Go','Rust','PHP','Ruby','SQL','HTML/CSS','Bash/Shell'];
 
@@ -248,7 +266,6 @@ function filterLangs(){
   renderDropdown();
   document.getElementById('langDropdown').classList.add('open');
 }
-
 function selectLang(name,display){
   selectedLang=name;
   showingVariations=false;
@@ -312,44 +329,75 @@ function loadHistory(i){
   document.getElementById('codeInput').value=h.code;
   updateLines();renderResult(h.result,h.code);
 }
+function getRiskLabel(grade){
+  if(grade==='A')return{text:'Low Risk',cls:'risk-low'};
+  if(grade==='B')return{text:'Medium Risk',cls:'risk-medium'};
+  if(grade==='C')return{text:'High Risk',cls:'risk-high'};
+  return{text:'Critical Risk',cls:'risk-critical'};
+}
+function toggleCollapse(id){
+  const body=document.getElementById('cb_'+id);
+  const icon=document.getElementById('ci_'+id);
+  body.classList.toggle('open');
+  icon.classList.toggle('open');
+}
 function renderResult(result,originalCode){
   const grade=getGrade(result.scores);
+  const risk=getRiskLabel(grade);
   const sc=s=>s==='good'?'good':s==='warn'?'warn':'bad';
   const sl=(s,l)=>`<span class="score-pill ${sc(s)}">${l}: ${s==='good'?'ok':s==='warn'?'warning':'issue'}</span>`;
   const fixedId='fixed_'+Date.now();
   const diffHtml=makeDiff(originalCode||'',result.fixed);
-  const explainSection=mode==='teach'&&result.explanation?`
-    <div class="section explain"><div class="section-head"><span class="dot dot-blue"></span>Explanation</div><div class="section-body">${result.explanation}</div></div>`:'';
   document.getElementById('outputBody').innerHTML=`
     <div class="result-body">
       <div class="grade-card">
         <div class="grade-circle grade-${grade}">${grade}</div>
-        <div><div class="grade-label">${getGradeLabel(grade)}</div>
-        <div class="score-row">${sl(result.scores.bugs,'Bugs')}${sl(result.scores.security,'Security')}${sl(result.scores.performance,'Performance')}</div></div>
+        <div>
+          <span class="risk-label ${risk.cls}">${risk.text}</span>
+          <div class="grade-label">${getGradeLabel(grade)}</div>
+          <div class="score-row">${sl(result.scores.bugs,'Bugs')}${sl(result.scores.security,'Security')}${sl(result.scores.performance,'Performance')}</div>
+        </div>
       </div>
-      <div class="section bugs"><div class="section-head"><span class="dot dot-red"></span>Bugs</div><div class="section-body">${result.bugs}</div></div>
-      <div class="section security"><div class="section-head"><span class="dot dot-amber"></span>Security</div><div class="section-body">${result.security}</div></div>
-      <div class="section perf"><div class="section-head"><span class="dot dot-green"></span>Performance</div><div class="section-body">${result.performance}</div></div>
-      ${explainSection}
+      <div class="section bugs">
+        <div class="section-head"><span class="dot dot-red"></span>Bugs<span class="priority-tag p0-tag">P0</span></div>
+        <div class="section-body">${result.bugs}</div>
+      </div>
+      <div class="section security">
+        <div class="section-head"><span class="dot dot-amber"></span>Security<span class="priority-tag p0-tag">P0</span></div>
+        <div class="section-body">${result.security}</div>
+      </div>
+      <div class="section perf">
+        <div class="section-head collapsible-head" onclick="toggleCollapse('perf')">
+          <span style="display:flex;align-items:center;gap:6px;"><span class="dot dot-green"></span>Performance<span class="priority-tag p1-tag">P1</span></span>
+          <span class="collapse-icon" id="ci_perf">▼</span>
+        </div>
+        <div class="section-body collapsible-body" id="cb_perf">${result.performance}</div>
+      </div>
+      ${''}
       <div class="section">
-        <div class="fixed-head"><span style="display:flex;align-items:center;gap:6px;"><span class="dot dot-purple"></span>Fixed code (diff)</span><button class="copy-btn" data-copy="${fixedId}" onclick="copyCode('${fixedId}')">Copy</button></div>
-        <div class="fixed-body" id="${fixedId}">${diffHtml}</div>
+        <div class="fixed-head collapsible-head" onclick="toggleCollapse('fix')">
+          <span style="display:flex;align-items:center;gap:6px;"><span class="dot dot-purple"></span>Fixed code (diff)<span class="priority-tag p1-tag">P1</span></span>
+          <span style="display:flex;align-items:center;gap:8px;"><button class="copy-btn" data-copy="${fixedId}" onclick="event.stopPropagation();copyCode('${fixedId}')">Copy</button><span class="collapse-icon" id="ci_fix">▼</span></span>
+        </div>
+        <div class="fixed-body collapsible-body open" id="cb_fix"><div id="${fixedId}">${diffHtml}</div></div>
       </div>
     </div>`;
-  document.getElementById('statusBadge').textContent='Grade: '+grade;
-  document.getElementById('statusBadge').style.color=grade==='A'?'#60c060':grade==='B'?'#60a0c0':grade==='C'?'#e0a040':'#f07070';
+  document.getElementById('statusBadge').textContent=risk.text;
+  document.getElementById('statusBadge').style.color=grade==='A'?'#60c060':grade==='B'?'#60a0c0':grade==='C'?'#e0a040':'#ff4444';
 }
 async function runReview(){
   const code=document.getElementById('codeInput').value.trim();
+  const prCode=document.getElementById('prInput').value.trim();
   const btn=document.getElementById('reviewBtn');
-  if(!code){alert('Paste some code first!');return;}
-  btn.disabled=true;btn.textContent='Reviewing...';
-  document.getElementById('outputBody').innerHTML='<div class="loading"><div class="spinner"></div><p>Analyzing your code...</p></div>';
+  if(!code){alert('Paste your main branch code first!');return;}
+  if(!prCode){alert('Paste your PR code first!');return;}
+  btn.disabled=true;btn.textContent='Simulating...';
+  document.getElementById('outputBody').innerHTML='<div class="loading"><div class="spinner"></div><p>Simulating merge...</p></div>';
   try{
     const res=await fetch('/api/review',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code,lang:selectedLang,mode})
+      body:JSON.stringify({code:`MAIN BRANCH:\n${code}\n\nPULL REQUEST:\n${prCode}`,lang:selectedLang,mode:'fix'})
     });
     const result=await res.json();
     if(result.error)throw new Error(result.error);
@@ -360,7 +408,7 @@ async function runReview(){
   }catch(e){
     document.getElementById('outputBody').innerHTML=`<div class="placeholder"><p style="color:#f07070;">Error: ${e.message}</p></div>`;
   }
-  btn.disabled=false;btn.textContent='Review my code';
+  btn.disabled=false;btn.textContent='Simulate Merge';
 }
 const MODALS={
   tos:{title:'Terms of Service',content:`<p>By using CodeReviewAI you agree to these terms. This service is provided as-is for code review purposes only.</p><p>You may not use this service for illegal purposes. AI-generated code reviews are suggestions only — always verify before using in production.</p><p>Your code is sent to Anthropic's API for processing. We are not responsible for any damages arising from the use of this service.</p><p>We reserve the right to terminate access to anyone who misuses the service.</p>`},
