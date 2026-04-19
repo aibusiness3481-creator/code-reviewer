@@ -135,7 +135,11 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
     <div class="left-panel">
       <div class="panel-header">
         <span class="panel-title">Main Branch</span>
-        <span id="lineCount" style="font-size:11px;color:#444;">0 lines</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="lineCount" style="font-size:11px;color:#444;">0 lines</span>
+          <button class="copy-btn" onclick="document.getElementById('mainUpload').click()">+ Upload</button>
+          <input type="file" id="mainUpload" multiple accept=".js,.ts,.py,.java,.cpp,.c,.cs,.go,.rs,.php,.rb,.lua,.html,.css,.sh,.sql,.json,.txt" style="display:none;" onchange="handleUpload(this,'codeInput')"/>
+        </div>
       </div>
       <div class="editor-wrap">
         <div class="line-numbers" id="lineNumbers">1</div>
@@ -145,6 +149,10 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
     <div class="right-panel" style="border-right:0.5px solid #2a2a2e;">
       <div class="panel-header">
         <span class="panel-title">Pull Request</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="copy-btn" onclick="document.getElementById('prUpload').click()">+ Upload</button>
+          <input type="file" id="prUpload" multiple accept=".js,.ts,.py,.java,.cpp,.c,.cs,.go,.rs,.php,.rb,.lua,.html,.css,.sh,.sql,.json,.txt" style="display:none;" onchange="handleUpload(this,'prInput')"/>
+        </div>
       </div>
       <div class="editor-wrap">
         <textarea class="code-input" id="prInput" placeholder="Paste your PR code here..."></textarea>
@@ -170,9 +178,12 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
     </div>
   </div>
   <div class="history-bar" id="historySection" style="display:none;">
-    <div class="history-title">Review history</div>
+    <div class="history-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Simulation history</span>
+      <span class="tos-link" onclick="clearHistory()" style="font-size:11px;color:#555;margin-right:16px;">Clear history</span>
+    </div>
     <div class="history-list" id="historyList">
-      <div class="empty-history">No reviews yet</div>
+      <div class="empty-history">No simulations yet</div>
     </div>
   </div>
   <div class="tos-bar">
@@ -316,18 +327,29 @@ function copyCode(id){
 }
 function renderHistory(){
   const el=document.getElementById('historyList');
-  if(reviewHistory.length===0){el.innerHTML='<div class="empty-history">No reviews yet</div>';return;}
-  el.innerHTML=reviewHistory.slice().reverse().map((h,i)=>`
-    <div class="history-item" onclick="loadHistory(${reviewHistory.length-1-i})">
-      <span class="history-grade" style="color:${h.grade==='A'?'#60c060':h.grade==='B'?'#60a0c0':h.grade==='C'?'#e0a040':'#f07070'}">${h.grade}</span>
+  if(reviewHistory.length===0){el.innerHTML='<div class="empty-history">No simulations yet</div>';return;}
+  el.innerHTML=reviewHistory.slice().reverse().map((h,i)=>{
+    const risk=getRiskLabel(getGrade(h.result.scores));
+    return`<div class="history-item" onclick="loadHistory(${reviewHistory.length-1-i})">
+      <span class="history-grade" style="color:${risk.cls==='risk-low'?'#60c060':risk.cls==='risk-medium'?'#60a0c0':risk.cls==='risk-high'?'#e0a040':'#ff4444'}">${risk.text}</span>
       <span class="history-snippet">${h.snippet}</span>
       <span class="history-time">${h.time}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function loadHistory(i){
   const h=reviewHistory[i];
-  document.getElementById('codeInput').value=h.code;
-  updateLines();renderResult(h.result,h.code);
+  document.getElementById('codeInput').value=h.main;
+  document.getElementById('prInput').value=h.pr;
+  updateLines();
+  document.getElementById('reportSection').style.display='block';
+  document.getElementById('historySection').style.display='block';
+  renderResult(h.result,h.main);
+}
+function clearHistory(){
+  reviewHistory=[];
+  document.getElementById('historySection').style.display='none';
+  renderHistory();
 }
 function getRiskLabel(grade){
   if(grade==='A')return{text:'Low Risk',cls:'risk-low'};
@@ -406,7 +428,8 @@ async function runReview(){
     document.getElementById('reportSection').style.display='block';
     document.getElementById('historySection').style.display='block';
     const grade=getGrade(result.scores);
-    reviewHistory.push({code,result,grade,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+    reviewHistory.push({main:code,pr:prCode,result,grade,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+    if(reviewHistory.length>10)reviewHistory.shift();
     renderHistory();
   }catch(e){
     document.getElementById('outputBody').innerHTML=`<div class="placeholder"><p style="color:#f07070;">Error: ${e.message}</p></div>`;
@@ -423,6 +446,25 @@ function openModal(type){
   document.getElementById('modalTitle').textContent=m.title;
   document.getElementById('modalContent').innerHTML=m.content;
   document.getElementById('modalBg').classList.add('open');
+}
+function handleUpload(input, targetId){
+  const files=Array.from(input.files);
+  if(!files.length)return;
+  let pending=files.length;
+  const chunks=[];
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      chunks.push(`--- file: ${file.name} ---\n${e.target.result}`);
+      if(--pending===0){
+        const ta=document.getElementById(targetId);
+        ta.value=(ta.value?ta.value+'\n\n':'')+chunks.join('\n\n');
+        updateLines();
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.value='';
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('open');}
 updateLines();renderDropdown();
