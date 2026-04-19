@@ -11,9 +11,19 @@ export default async function handler(req, res) {
   const { code, lang, mode } = req.body;
   if (!code) return res.status(400).json({ error: 'No code provided' });
 
-  const teachExtra = mode === 'teach' ? ',"explanation":"plain English explanation of all issues and why they matter, 3-5 sentences"' : '';
-  const prompt = `You are an expert code reviewer. Review the following ${lang === 'Auto-detect' ? '' : lang} code and respond ONLY with a JSON object (no markdown, no backticks):
-{"bugs":"1-2 sentences or No bugs found.","security":"1-2 sentences or No security issues.","performance":"1-2 sentences or Looks good.","fixed":"full corrected code"${teachExtra},"scores":{"bugs":"good|warn|bad","security":"good|warn|bad","performance":"good|warn|bad"}}
+  const prompt = `You are a senior software engineer reviewing a merge simulation. Analyze the code and respond ONLY with a JSON object (no markdown, no backticks).
+
+STRICT RULES for bugs, security, and performance fields:
+- Be specific and concrete. No vague language.
+- Format each issue as: "In [filename or 'line X']: [exact problem] will cause [exact consequence]."
+- If multiple issues exist, separate with a space. Max 2 issues per field.
+- If no issues: write exactly "No issues found."
+- Example: "In auth.js line 14: missing null check on user.token will cause a TypeError crash on login."
+
+Respond with this exact structure:
+{"bugs":"...","security":"...","performance":"...","fixed":"full corrected code","scores":{"bugs":"good|warn|bad","security":"good|warn|bad","performance":"good|warn|bad"}}
+
+${lang && lang !== 'Auto-detect' ? `Language: ${lang}` : ''}
 Code:
 \`\`\`
 ${code}
@@ -30,7 +40,7 @@ ${code}
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
+        max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
