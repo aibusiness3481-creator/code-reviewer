@@ -99,7 +99,13 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 .p0-tag { background: #2a0a0a; color: #ff4444; }
 .p1-tag { background: #1e1510; color: #e0a040; }
 .p2-tag { background: #0f1a10; color: #60c060; }
-.modal-bg.open { display: flex; }
+.auth-btn { font-size: 12px; padding: 6px 14px; background: #1e1b3a; color: #a89ff0; border: 0.5px solid #3d3680; border-radius: 6px; cursor: pointer; margin-left: auto; }
+.auth-btn:hover { background: #2a2550; }
+.auth-input { width: 100%; background: #1a1a1e; color: #c9d1d9; border: 0.5px solid #2a2a2e; border-radius: 6px; padding: 8px 12px; font-size: 13px; outline: none; margin-bottom: 10px; }
+.auth-input:focus { border-color: #7c6fe0; }
+.auth-error { font-size: 12px; color: #f07070; margin-bottom: 8px; }
+.auth-switch { font-size: 12px; color: #555; margin-top: 10px; text-align: center; cursor: pointer; }
+.auth-switch span { color: #a89ff0; text-decoration: underline; }
 .modal { background: #111114; border: 0.5px solid #2a2a2e; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 70vh; overflow-y: auto; }
 .modal h2 { font-size: 15px; color: #e0e0e0; margin-bottom: 12px; font-weight: 500; }
 .modal p { font-size: 13px; color: #888; line-height: 1.7; margin-bottom: 10px; }
@@ -124,6 +130,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <text x="52" y="44" font-family="system-ui" font-size="11" font-weight="400" fill="#555">pre-merge AI</text>
     </svg>
     <div class="badge">powered by Claude</div>
+    <button class="auth-btn" id="authBtn" onclick="openAuthModal()">Sign in</button>
   </div>
   <div class="toolbar">
     <div class="lang-wrap">
@@ -196,6 +203,16 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
   <div class="modal">
     <h2 id="modalTitle"></h2>
     <div id="modalContent"></div>
+  </div>
+</div>
+<div class="modal-bg" id="authModalBg" onclick="if(event.target===this)closeAuthModal()">
+  <div class="modal" style="max-width:360px;">
+    <h2 id="authModalTitle">Sign in</h2>
+    <div id="authError" class="auth-error" style="display:none;"></div>
+    <input class="auth-input" id="authEmail" type="email" placeholder="Email" />
+    <input class="auth-input" id="authPassword" type="password" placeholder="Password" />
+    <button class="run-btn" id="authSubmitBtn" onclick="submitAuth()" style="margin:0;width:100%;padding:10px 0;">Sign in</button>
+    <div class="auth-switch" id="authSwitch">No account? <span onclick="toggleAuthMode()">Sign up</span></div>
   </div>
 </div>
 </div>
@@ -363,15 +380,26 @@ function toggleCollapse(id){
   body.classList.toggle('open');
   icon.classList.toggle('open');
 }
+function getVerdict(grade){
+  if(grade==='A')return{text:'SAFE TO MERGE',score:10,bg:'#0f2010',color:'#60c060',border:'#1e4020'};
+  if(grade==='B')return{text:'CAUTION',score:35,bg:'#1e1510',color:'#e0a040',border:'#3d2a10'};
+  if(grade==='C')return{text:'DO NOT MERGE',score:65,bg:'#1e1010',color:'#f07070',border:'#3d1515'};
+  return{text:'DO NOT MERGE',score:85,bg:'#2a0a0a',color:'#ff4444',border:'#5a1010'};
+}
 function renderResult(result,originalCode){
   const grade=getGrade(result.scores);
   const risk=getRiskLabel(grade);
+  const verdict=getVerdict(grade);
   const sc=s=>s==='good'?'good':s==='warn'?'warn':'bad';
   const sl=(s,l)=>`<span class="score-pill ${sc(s)}">${l}: ${s==='good'?'ok':s==='warn'?'warning':'issue'}</span>`;
   const fixedId='fixed_'+Date.now();
   const diffHtml=makeDiff(originalCode||'',result.fixed);
   document.getElementById('outputBody').innerHTML=`
     <div class="result-body">
+      <div style="background:${verdict.bg};border:0.5px solid ${verdict.border};border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:18px;font-weight:700;color:${verdict.color};letter-spacing:0.05em;">${verdict.text}</span>
+        <span style="font-size:12px;color:${verdict.color};opacity:0.7;">Risk Score: ${verdict.score}/100</span>
+      </div>
       <div class="grade-card">
         <div class="grade-circle grade-${grade}">${grade}</div>
         <div>
@@ -431,6 +459,9 @@ async function runReview(){
     reviewHistory.push({main:code,pr:prCode,result,grade,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
     if(reviewHistory.length>10)reviewHistory.shift();
     renderHistory();
+    if(currentUser){
+      fetch('/api/history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:currentUser.id,main_code:code,pr_code:prCode,result})});
+    }
   }catch(e){
     document.getElementById('outputBody').innerHTML=`<div class="placeholder"><p style="color:#f07070;">Error: ${e.message}</p></div>`;
   }
@@ -466,6 +497,73 @@ function handleUpload(input, targetId){
   });
   input.value='';
 }
+// Auth
+let currentUser = JSON.parse(localStorage.getItem('ms_user') || 'null');
+let authMode = 'login';
+
+function openAuthModal(){
+  if(currentUser){ logout(); return; }
+  document.getElementById('authModalBg').classList.add('open');
+}
+function closeAuthModal(){
+  document.getElementById('authModalBg').classList.remove('open');
+  document.getElementById('authError').style.display='none';
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPassword').value='';
+}
+function toggleAuthMode(){
+  authMode = authMode==='login'?'signup':'login';
+  document.getElementById('authModalTitle').textContent = authMode==='login'?'Sign in':'Sign up';
+  document.getElementById('authSubmitBtn').textContent = authMode==='login'?'Sign in':'Sign up';
+  document.getElementById('authSwitch').innerHTML = authMode==='login'?'No account? <span onclick="toggleAuthMode()">Sign up</span>':'Have an account? <span onclick="toggleAuthMode()">Sign in</span>';
+  document.getElementById('authError').style.display='none';
+}
+async function submitAuth(){
+  const email=document.getElementById('authEmail').value.trim();
+  const password=document.getElementById('authPassword').value.trim();
+  const errEl=document.getElementById('authError');
+  if(!email||!password){errEl.textContent='Email and password required.';errEl.style.display='block';return;}
+  const btn=document.getElementById('authSubmitBtn');
+  btn.disabled=true;btn.textContent='Please wait...';
+  try{
+    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:authMode,email,password})});
+    const data=await res.json();
+    if(data.error){errEl.textContent=data.error;errEl.style.display='block';}
+    else{
+      currentUser=data.user;
+      localStorage.setItem('ms_user',JSON.stringify(currentUser));
+      updateAuthUI();
+      closeAuthModal();
+      loadUserHistory();
+    }
+  }catch(e){errEl.textContent='Something went wrong.';errEl.style.display='block';}
+  btn.disabled=false;btn.textContent=authMode==='login'?'Sign in':'Sign up';
+}
+function logout(){
+  currentUser=null;
+  localStorage.removeItem('ms_user');
+  reviewHistory=[];
+  renderHistory();
+  updateAuthUI();
+}
+function updateAuthUI(){
+  const btn=document.getElementById('authBtn');
+  btn.textContent=currentUser?`Sign out (${currentUser.email})`:'Sign in';
+}
+async function loadUserHistory(){
+  if(!currentUser)return;
+  try{
+    const res=await fetch(`/api/history?user_id=${currentUser.id}`);
+    const data=await res.json();
+    if(data.history&&data.history.length){
+      reviewHistory=data.history.map(h=>({main:h.main_code,pr:h.pr_code,result:h.result,grade:getGrade(h.result.scores),snippet:(h.main_code||'').split('\n')[0].slice(0,40),time:new Date(h.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}));
+      document.getElementById('historySection').style.display='block';
+      renderHistory();
+    }
+  }catch(e){}
+}
+if(currentUser){updateAuthUI();loadUserHistory();}
+
 function closeModal(){document.getElementById('modalBg').classList.remove('open');}
 updateLines();renderDropdown();
 document.addEventListener('click', function(e){
