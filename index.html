@@ -443,6 +443,14 @@ async function runReview(){
   const btn=document.getElementById('reviewBtn');
   if(!code){alert('Paste your main branch code first!');return;}
   if(!prCode){alert('Paste your PR code first!');return;}
+  if(!currentUser){
+    const guestUsed=parseInt(localStorage.getItem('ms_guest_used')||'0');
+    if(guestUsed>=1){
+      document.getElementById('reportSection').style.display='block';
+      document.getElementById('outputBody').innerHTML='<div class="placeholder"><p style="color:#a89ff0;">Sign up to continue — <span style="text-decoration:underline;cursor:pointer;" onclick="openAuthModal()">create a free account</span></p></div>';
+      return;
+    }
+  }
   btn.disabled=true;btn.textContent='Simulating...';
   document.getElementById('reportSection').style.display='block';
   document.getElementById('outputBody').innerHTML='<div class="loading"><div class="spinner"></div><p>Simulating merge...</p></div>';
@@ -450,10 +458,11 @@ async function runReview(){
     const res=await fetch('/api/review',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code:`MAIN BRANCH:\n${code}\n\nPULL REQUEST:\n${prCode}`,lang:selectedLang,mode:'fix'})
+      body:JSON.stringify({code:`MAIN BRANCH:\n${code}\n\nPULL REQUEST:\n${prCode}`,lang:selectedLang,mode:'fix',user_id:currentUser?currentUser.id:null})
     });
     const result=await res.json();
-    if(result.error)throw new Error(result.error);
+    if(result.error)throw new Error(result.error==='Free limit reached'?'You have reached your free limit of 10 analyses.':result.error);
+    if(!currentUser) localStorage.setItem('ms_guest_used','1');
     renderResult(result,code);
     document.getElementById('reportSection').style.display='block';
     document.getElementById('historySection').style.display='block';
