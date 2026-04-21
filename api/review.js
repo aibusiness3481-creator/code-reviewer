@@ -1,3 +1,7 @@
+const SUPABASE_URL = 'https://jppknnixrwzdarrzfvqp.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGtubml4cnd6ZGFycnpmdnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MzAzNDcsImV4cCI6MjA5MjIwNjM0N30.FJJw1lU8KUUnsp1vUJcv_jdTKxu6b2ZelyLm3GVn0Z4';
+const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -5,11 +9,17 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  console.log('Request body:', JSON.stringify(req.body));
-  console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
-
-  const { code, lang, mode } = req.body;
+  const { code, lang, user_id } = req.body;
   if (!code) return res.status(400).json({ error: 'No code provided' });
+
+  // Check and enforce usage limit
+  if (user_id) {
+    const userRes = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${user_id}&select=usage_count`, { headers: SB_HEADERS });
+    const users = await userRes.json();
+    if (users.length && users[0].usage_count >= 3) {
+      return res.status(403).json({ error: 'Free limit reached' });
+    }
+  }
 
   const prompt = `You are a senior software engineer reviewing a merge simulation. Analyze the code and respond ONLY with a JSON object (no markdown, no backticks).
 
@@ -30,7 +40,6 @@ ${code}
 \`\`\``;
 
   try {
-    console.log('Calling Anthropic API...');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -44,15 +53,22 @@ ${code}
         messages: [{ role: 'user', content: prompt }]
       })
     });
-    console.log('Anthropic status:', response.status);
     const data = await response.json();
-    console.log('Anthropic response:', JSON.stringify(data));
     if (data.error) return res.status(400).json({ error: data.error.message });
     const text = data.content.map(i => i.text || '').join('');
     const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    // Increment usage count
+    if (user_id) {
+      await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+        method: 'PATCH',
+        headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ usage_count: (users?.[0]?.usage_count || 0) + 1 })
+      });
+    }
+
     res.status(200).json(result);
   } catch (e) {
-    console.log('Caught error:', e.message);
     res.status(500).json({ error: e.message });
   }
 }
