@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MergeSense</title>
+<title>Mergly</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
@@ -128,7 +128,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <circle cx="14" cy="20" r="5" fill="#7c6fe0"/>
       <circle cx="30" cy="32" r="5" fill="#a89ff0"/>
       <line x1="14" y1="20" x2="30" y2="32" stroke="#7c6fe0" stroke-width="1.5" stroke-dasharray="3,2"/>
-      <text x="52" y="26" font-family="system-ui" font-size="18" font-weight="500" fill="#e8e8f0">MergeSense</text>
+      <text x="52" y="26" font-family="system-ui" font-size="18" font-weight="500" fill="#e8e8f0">Mergly</text>
       <text x="52" y="44" font-family="system-ui" font-size="11" font-weight="400" fill="#555">pre-merge AI</text>
     </svg>
     <div class="badge">powered by Claude</div>
@@ -479,7 +479,7 @@ async function runReview(){
   btn.disabled=false;btn.textContent='Simulate Merge';
 }
 const MODALS={
-  tos:{title:'Terms of Service',content:`<p>By using CodeReviewAI you agree to these terms. This service is provided as-is for code review purposes only.</p><p>You may not use this service for illegal purposes. AI-generated code reviews are suggestions only — always verify before using in production.</p><p>Your code is sent to Anthropic's API for processing. We are not responsible for any damages arising from the use of this service.</p><p>We reserve the right to terminate access to anyone who misuses the service.</p>`},
+  tos:{title:'Terms of Service',content:`<p>By using Mergly you agree to these terms. This service is provided as-is for code review purposes only.</p><p>You may not use this service for illegal purposes. AI-generated code reviews are suggestions only — always verify before using in production.</p><p>Your code is sent to Anthropic's API for processing. We are not responsible for any damages arising from the use of this service.</p><p>We reserve the right to terminate access to anyone who misuses the service.</p>`},
   privacy:{title:'Privacy Policy',content:`<p>We take your privacy seriously.</p><p>Your code is sent to Anthropic's API to generate reviews. We do not store your code or your API key on our servers.</p><p>We collect basic usage analytics to improve the service. No personal data is collected without your consent.</p><p>We do not sell your data to third parties. Ever.</p>`},
   cookies:{title:'Cookie Policy',content:`<p>This site uses minimal cookies for basic functionality only.</p><p>We do not use advertising or tracking cookies. No third party cookies are set without your knowledge.</p><p>You can disable cookies in your browser settings at any time.</p>`}
 };
