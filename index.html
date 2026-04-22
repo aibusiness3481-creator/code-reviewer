@@ -159,12 +159,14 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <div class="panel-header">
         <span class="panel-title">Pull Request</span>
         <div style="display:flex;align-items:center;gap:8px;">
+          <span id="prLineCount" style="font-size:11px;color:#444;">0 lines</span>
           <button class="copy-btn" onclick="document.getElementById('prUpload').click()">+ Upload</button>
           <input type="file" id="prUpload" multiple accept=".js,.ts,.py,.java,.cpp,.c,.cs,.go,.rs,.php,.rb,.lua,.html,.css,.sh,.sql,.json,.txt" style="display:none;" onchange="handleUpload(this,'prInput')"/>
         </div>
       </div>
       <div class="editor-wrap">
-        <textarea class="code-input" id="prInput" placeholder="Paste your PR code here..."></textarea>
+        <div class="line-numbers" id="prLineNumbers">1</div>
+        <textarea class="code-input" id="prInput" placeholder="Paste your PR code here..." oninput="updatePRLines()"></textarea>
       </div>
     </div>
   </div>
@@ -314,7 +316,15 @@ function updateLines(){
   const lines=ta.value?ta.value.split('\n').length:1;
   ln.innerHTML=Array.from({length:lines},(_,i)=>i+1).join('<br>');
   document.getElementById('lineCount').textContent=lines+' lines';
-  document.getElementById('creditCost').textContent=Math.ceil(lines/10);
+  ln.scrollTop=ta.scrollTop;
+}
+function updatePRLines(){
+  const ta=document.getElementById('prInput');
+  const ln=document.getElementById('prLineNumbers');
+  const lines=ta.value?ta.value.split('\n').length:1;
+  ln.innerHTML=Array.from({length:lines},(_,i)=>i+1).join('<br>');
+  document.getElementById('prLineCount').textContent=lines+' lines';
+  ln.scrollTop=ta.scrollTop;
 }
 function getGrade(scores){
   const s=Object.values(scores);
@@ -360,7 +370,7 @@ function loadHistory(i){
   const h=reviewHistory[i];
   document.getElementById('codeInput').value=h.main;
   document.getElementById('prInput').value=h.pr;
-  updateLines();
+  updateLines();updatePRLines();
   document.getElementById('reportSection').style.display='block';
   document.getElementById('historySection').style.display='block';
   renderResult(h.result,h.main);
@@ -501,7 +511,7 @@ function handleUpload(input, targetId){
       if(--pending===0){
         const ta=document.getElementById(targetId);
         ta.value=(ta.value?ta.value+'\n\n':'')+chunks.join('\n\n');
-        updateLines();
+        if(targetId==='codeInput') updateLines(); else updatePRLines();
       }
     };
     reader.readAsText(file);
@@ -576,7 +586,13 @@ async function loadUserHistory(){
 if(currentUser){updateAuthUI();loadUserHistory();}
 
 function closeModal(){document.getElementById('modalBg').classList.remove('open');}
-updateLines();renderDropdown();
+updateLines();updatePRLines();renderDropdown();
+document.getElementById('codeInput').addEventListener('scroll',()=>{
+  document.getElementById('lineNumbers').scrollTop=document.getElementById('codeInput').scrollTop;
+});
+document.getElementById('prInput').addEventListener('scroll',()=>{
+  document.getElementById('prLineNumbers').scrollTop=document.getElementById('prInput').scrollTop;
+});
 document.addEventListener('click', function(e){
   const wrap = document.querySelector('.lang-wrap');
   if(wrap && !wrap.contains(e.target)) closeDropdown();
