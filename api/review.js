@@ -21,23 +21,22 @@ export default async function handler(req, res) {
     }
   }
 
-  const prompt = `You are a senior software engineer reviewing a merge simulation. Analyze the code and respond ONLY with a JSON object (no markdown, no backticks).
+  const prompt = `You are Mergly, a merge risk analyzer.
+Compare the MAIN BRANCH and PULL REQUEST code below and respond in JSON only with this exact structure:
+{"merge_verdict":"","risk_score":0,"summary":"","issues":[{"line":"","issue":"","impact":"","fix":""}],"simulation_report":""}
 
-STRICT RULES for bugs, security, and performance fields:
-- Be specific and concrete. No vague language.
-- Format each issue as: "In [filename or 'line X']: [exact problem] will cause [exact consequence]."
-- If multiple issues exist, separate with a space. Max 2 issues per field.
-- If no issues: write exactly "No issues found."
-- Example: "In auth.js line 14: missing null check on user.token will cause a TypeError crash on login."
-
-Respond with this exact structure:
-{"bugs":"...","security":"...","performance":"...","fixed":"full corrected code","scores":{"bugs":"good|warn|bad","security":"good|warn|bad","performance":"good|warn|bad"}}
+Rules:
+- risk_score 0-20: merge_verdict = "SAFE"
+- risk_score 21-40: merge_verdict = "CAUTION"
+- risk_score 41-60: merge_verdict = "MODERATE"
+- risk_score 61-80: merge_verdict = "DO NOT MERGE"
+- risk_score 81-100: merge_verdict = "CRITICAL"
+- Focus on runtime errors, undefined variables, logic breaks, security risks
+- Be specific: include file name and line number where identifiable
+- No extra text. JSON only.
 
 ${lang && lang !== 'Auto-detect' ? `Language: ${lang}` : ''}
-Code:
-\`\`\`
-${code}
-\`\`\``;
+${code}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
