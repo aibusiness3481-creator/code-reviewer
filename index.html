@@ -358,9 +358,9 @@ function renderHistory(){
   const el=document.getElementById('historyList');
   if(reviewHistory.length===0){el.innerHTML='<div class="empty-history">No simulations yet</div>';return;}
   el.innerHTML=reviewHistory.slice().reverse().map((h,i)=>{
-    const risk=getRiskLabel(getGrade(h.result.scores));
+    const v=getVerdictStyle(h.result.merge_verdict||'');
     return`<div class="history-item" onclick="loadHistory(${reviewHistory.length-1-i})">
-      <span class="history-grade" style="color:${risk.cls==='risk-low'?'#60c060':risk.cls==='risk-medium'?'#60a0c0':risk.cls==='risk-high'?'#e0a040':'#ff4444'}">${risk.text}</span>
+      <span class="history-grade" style="color:${v.color};">${h.result.merge_verdict||'?'}</span>
       <span class="history-snippet">${h.snippet}</span>
       <span class="history-time">${h.time}</span>
     </div>`;
@@ -373,7 +373,7 @@ function loadHistory(i){
   updateLines();updatePRLines();
   document.getElementById('reportSection').style.display='block';
   document.getElementById('historySection').style.display='block';
-  renderResult(h.result,h.main);
+  renderResult(h.result);
 }
 function clearHistory(){
   reviewHistory=[];
@@ -392,60 +392,51 @@ function toggleCollapse(id){
   body.classList.toggle('open');
   icon.classList.toggle('open');
 }
-function getVerdict(grade){
-  if(grade==='A')return{text:'SAFE TO MERGE',score:10,bg:'#0f2010',color:'#60c060',border:'#1e4020'};
-  if(grade==='B')return{text:'CAUTION',score:35,bg:'#1e1510',color:'#e0a040',border:'#3d2a10'};
-  if(grade==='C')return{text:'DO NOT MERGE',score:65,bg:'#1e1010',color:'#f07070',border:'#3d1515'};
-  return{text:'DO NOT MERGE',score:85,bg:'#2a0a0a',color:'#ff4444',border:'#5a1010'};
+function getVerdictStyle(verdict){
+  if(verdict==='SAFE')return{bg:'#0f2010',color:'#60c060',border:'#1e4020'};
+  if(verdict==='CAUTION')return{bg:'#0e1a20',color:'#60a0c0',border:'#1a3040'};
+  if(verdict==='MODERATE')return{bg:'#1e1510',color:'#e0a040',border:'#3d2a10'};
+  if(verdict==='DO NOT MERGE')return{bg:'#1e1010',color:'#f07070',border:'#3d1515'};
+  return{bg:'#2a0a0a',color:'#ff4444',border:'#5a1010'};
 }
-function renderResult(result,originalCode){
-  const grade=getGrade(result.scores);
-  const risk=getRiskLabel(grade);
-  const verdict=getVerdict(grade);
-  const sc=s=>s==='good'?'good':s==='warn'?'warn':'bad';
-  const sl=(s,l)=>`<span class="score-pill ${sc(s)}">${l}: ${s==='good'?'ok':s==='warn'?'warning':'issue'}</span>`;
-  const fixedId='fixed_'+Date.now();
-  const diffHtml=makeDiff(originalCode||'',result.fixed);
+function renderResult(result){
+  const v=getVerdictStyle(result.merge_verdict);
+  const issues=(result.issues||[]).map(iss=>`
+    <div style="border:0.5px solid #2a2a2e;border-radius:8px;overflow:hidden;margin-bottom:10px;">
+      <div style="padding:7px 12px;background:#1a1a1e;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:#f07070;font-weight:600;">Line ${iss.line||'?'}</span>
+        <span style="font-size:12px;color:#c9d1d9;font-weight:500;">${iss.issue||''}</span>
+      </div>
+      <div style="padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">Impact</div><div style="font-size:12px;color:#b0b0c0;">${iss.impact||''}</div></div>
+        <div><div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">Fix</div><div style="font-size:12px;color:#a89ff0;">${iss.fix||''}</div></div>
+      </div>
+    </div>`).join('');
+
   document.getElementById('outputBody').innerHTML=`
     <div class="result-body">
-      <div style="background:${verdict.bg};border:0.5px solid ${verdict.border};border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:18px;font-weight:700;color:${verdict.color};letter-spacing:0.05em;">${verdict.text}</span>
-        <span style="font-size:12px;color:${verdict.color};opacity:0.7;">Risk Score: ${verdict.score}/100</span>
+      <div style="background:${v.bg};border:0.5px solid ${v.border};border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:18px;font-weight:700;color:${v.color};letter-spacing:0.05em;">${result.merge_verdict}</span>
+        <span style="font-size:12px;color:${v.color};opacity:0.8;">Risk Score: ${result.risk_score}/100</span>
       </div>
-      <div class="grade-card">
-        <div class="grade-circle grade-${grade}">${grade}</div>
-        <div>
-          <span class="risk-label ${risk.cls}">${risk.text}</span>
-          <div class="grade-label">${getGradeLabel(grade)}</div>
-          <div class="score-row">${sl(result.scores.bugs,'Bugs')}${sl(result.scores.security,'Security')}${sl(result.scores.performance,'Performance')}</div>
-        </div>
+      <div class="section" style="border-color:#2a2a2e;">
+        <div class="section-head" style="background:#111114;color:#a0a0b0;">Summary</div>
+        <div class="section-body">${result.summary||''}</div>
       </div>
-      <div class="section bugs">
-        <div class="section-head"><span class="dot dot-red"></span>Bugs<span class="priority-tag p0-tag">P0</span></div>
-        <div class="section-body">${result.bugs}</div>
-      </div>
-      <div class="section security">
-        <div class="section-head"><span class="dot dot-amber"></span>Security<span class="priority-tag p0-tag">P0</span></div>
-        <div class="section-body">${result.security}</div>
-      </div>
-      <div class="section perf">
-        <div class="section-head collapsible-head" onclick="toggleCollapse('perf')">
-          <span style="display:flex;align-items:center;gap:6px;"><span class="dot dot-green"></span>Performance<span class="priority-tag p1-tag">P1</span></span>
-          <span class="collapse-icon" id="ci_perf">▼</span>
-        </div>
-        <div class="section-body collapsible-body" id="cb_perf">${result.performance}</div>
-      </div>
-      ${''}
+      ${issues?`<div class="section" style="border-color:#2a2a2e;">
+        <div class="section-head" style="background:#111114;color:#f07070;">Issues<span class="priority-tag p0-tag" style="margin-left:8px;">${(result.issues||[]).length}</span></div>
+        <div style="padding:10px 12px;">${issues}</div>
+      </div>`:''}
       <div class="section">
-        <div class="fixed-head collapsible-head" onclick="toggleCollapse('fix')">
-          <span style="display:flex;align-items:center;gap:6px;"><span class="dot dot-purple"></span>Fixed code (diff)<span class="priority-tag p1-tag">P1</span></span>
-          <span style="display:flex;align-items:center;gap:8px;"><button class="copy-btn" data-copy="${fixedId}" onclick="event.stopPropagation();copyCode('${fixedId}')">Copy</button><span class="collapse-icon" id="ci_fix">▼</span></span>
+        <div class="section-head collapsible-head" onclick="toggleCollapse('report')" style="background:#111220;color:#7c6fe0;">
+          <span>Simulation Report</span>
+          <span class="collapse-icon open" id="ci_report">▼</span>
         </div>
-        <div class="fixed-body collapsible-body open" id="cb_fix"><div id="${fixedId}">${diffHtml}</div></div>
+        <div class="section-body collapsible-body open" id="cb_report" style="white-space:pre-wrap;font-family:monospace;font-size:12px;">${result.simulation_report||''}</div>
       </div>
     </div>`;
-  document.getElementById('statusBadge').textContent=risk.text;
-  document.getElementById('statusBadge').style.color=grade==='A'?'#60c060':grade==='B'?'#60a0c0':grade==='C'?'#e0a040':'#ff4444';
+  document.getElementById('statusBadge').textContent=result.merge_verdict;
+  document.getElementById('statusBadge').style.color=v.color;
 }
 async function runReview(){
   const code=document.getElementById('codeInput').value.trim();
@@ -473,11 +464,11 @@ async function runReview(){
     const result=await res.json();
     if(result.error)throw new Error(result.error==='Free limit reached'?'You have reached your free limit of 10 analyses.':result.error);
     if(!currentUser) localStorage.setItem('ms_guest_used','1');
-    renderResult(result,code);
+    renderResult(result);
     document.getElementById('reportSection').style.display='block';
     document.getElementById('historySection').style.display='block';
     const grade=getGrade(result.scores);
-    reviewHistory.push({main:code,pr:prCode,result,grade,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+    reviewHistory.push({main:code,pr:prCode,result,snippet:code.split('\n')[0].slice(0,40),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
     if(reviewHistory.length>10)reviewHistory.shift();
     renderHistory();
     if(currentUser){
@@ -577,7 +568,7 @@ async function loadUserHistory(){
     const res=await fetch(`/api/history?user_id=${currentUser.id}`);
     const data=await res.json();
     if(data.history&&data.history.length){
-      reviewHistory=data.history.map(h=>({main:h.main_code,pr:h.pr_code,result:h.result,grade:getGrade(h.result.scores),snippet:(h.main_code||'').split('\n')[0].slice(0,40),time:new Date(h.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}));
+      reviewHistory=data.history.map(h=>({main:h.main_code,pr:h.pr_code,result:h.result,snippet:(h.main_code||'').split('\n')[0].slice(0,40),time:new Date(h.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}));
       document.getElementById('historySection').style.display='block';
       renderHistory();
     }
@@ -590,13 +581,4 @@ updateLines();updatePRLines();renderDropdown();
 document.getElementById('codeInput').addEventListener('scroll', function(){
   document.getElementById('lineNumbers').scrollTop = this.scrollTop;
 });
-document.getElementById('prInput').addEventListener('scroll', function(){
-  document.getElementById('prLineNumbers').scrollTop = this.scrollTop;
-});
-document.addEventListener('click', function(e){
-  const wrap = document.querySelector('.lang-wrap');
-  if(wrap && !wrap.contains(e.target)) closeDropdown();
-});
-</script>
-</body>
-</html>
+document.getElementById('prInput').addEventLi
