@@ -1,19 +1,5 @@
-const SUPABASE_URL = 'https://jppknnixrwzdarrzfvqp.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGtubml4cnd6ZGFycnpmdnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MzAzNDcsImV4cCI6MjA5MjIwNjM0N30.FJJw1lU8KUUnsp1vUJcv_jdTKxu6b2ZelyLm3GVn0Z4';
-
-async function query(path, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Prefer': 'return=representation'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  return res.json();
-}
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,24 +12,38 @@ export default async function handler(req, res) {
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   if (action === 'signup') {
-    const existing = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=id`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email, password })
     }).then(r => r.json());
 
-    if (existing.length > 0) return res.status(400).json({ error: 'Email already registered' });
+    if (r.error) return res.status(400).json({ error: r.error.message });
 
-    const result = await query('users', { email, password });
-    if (result.error) return res.status(400).json({ error: result.error.message });
-    return res.status(200).json({ user: { id: result[0].id, email: result[0].email } });
+    // Insert into users table to track usage_count
+    await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ id: r.user.id, email: r.user.email, usage_count: 0 })
+    });
+
+    return res.status(200).json({ user: { id: r.user.id, email: r.user.email } });
   }
 
   if (action === 'login') {
-    const result = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}&select=id,email`, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ email, password })
     }).then(r => r.json());
 
-    if (!result.length) return res.status(401).json({ error: 'Invalid email or password' });
-    return res.status(200).json({ user: { id: result[0].id, email: result[0].email } });
+    if (r.error) return res.status(401).json({ error: r.error.message });
+    return res.status(200).json({ user: { id: r.user.id, email: r.user.email } });
   }
 
   return res.status(400).json({ error: 'Invalid action' });
