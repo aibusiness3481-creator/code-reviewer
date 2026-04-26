@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'https://jppknnixrwzdarrzfvqp.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwcGtubml4cnd6ZGFycnpmdnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MzAzNDcsImV4cCI6MjA5MjIwNjM0N30.FJJw1lU8KUUnsp1vUJcv_jdTKxu6b2ZelyLm3GVn0Z4';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
 
 export default async function handler(req, res) {
