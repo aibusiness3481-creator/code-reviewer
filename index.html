@@ -16,7 +16,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
 
 .toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 0.5px solid #2a2a2e; background: #0f0f12; flex-wrap: wrap; }
 .lang-wrap { position: relative; flex: 1; min-width: 180px; }
-.lang-search { width: 100%; background: #1a1a1e; color: #c9d1d9; border: 0.5px solid #2a2a2e; border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; }
+.lang-search { width: 100%; background: #1a1a1e; color: #c9d1d9; border: 0.5px solid #2a2a2e; border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; appearance: none; -webkit-appearance: none; }
 .lang-search:focus { border-color: #7c6fe0; }
 .lang-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1a1a1e; border: 0.5px solid #2a2a2e; border-radius: 6px; margin-top: 4px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; }
 .lang-dropdown.open { display: block; }
@@ -177,7 +177,7 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0c; d
       <circle cx="29" cy="28" r="5" fill="#a89ff0"/>
       <line x1="13" y1="16" x2="29" y2="28" stroke="#7c6fe0" stroke-width="1.5" stroke-dasharray="3,2"/>
     </svg>
-    <button class="run-btn" id="reviewBtn" onclick="runReview()" style="margin:0;width:calc(50% + 115px);padding:14px 0;font-size:15px;">Simulate Merge</button>
+    <button class="run-btn" id="reviewBtn" onclick="runReview()" style="margin:0;width:calc(50% + 115px);padding:14px 0;font-size:15px;font-weight:600;letter-spacing:0.01em;">Simulate Merge</button>
   </div>
   <div style="border-top:0.5px solid #2a2a2e;" id="reportSection" style="display:none;">
     <div class="panel-header">
@@ -513,8 +513,12 @@ function handleUpload(input, targetId){
 let currentUser = JSON.parse(localStorage.getItem('ms_user') || 'null');
 let authMode = 'login';
 
+function selectLangFromSelect(val){ selectedLang=val; }
 function openAuthModal(){
   if(currentUser){ logout(); return; }
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPassword').value='';
+  document.getElementById('authError').style.display='none';
   document.getElementById('authModalBg').classList.add('open');
 }
 function closeAuthModal(){
@@ -581,4 +585,18 @@ updateLines();updatePRLines();renderDropdown();
 document.getElementById('codeInput').addEventListener('scroll', function(){
   document.getElementById('lineNumbers').scrollTop = this.scrollTop;
 });
-document.getElementById('prInput').addEventLi
+document.getElementById('prInput').addEventListener('scroll', function(){
+  document.getElementById('prLineNumbers').scrollTop = this.scrollTop;
+});
+document.addEventListener('click', function(e){
+  const wrap=document.querySelector('.lang-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    closeDropdown();
+  }
+});
+document.getElementById('langSearch').addEventListener('input', function(){
+  if(this.value.trim()==='') closeDropdown();
+});
+</script>
+</body>
+</html>
