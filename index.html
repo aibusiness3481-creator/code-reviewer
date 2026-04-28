@@ -395,8 +395,8 @@ function toggleCollapse(id){
 function getVerdictStyle(verdict){
   if(verdict==='SAFE')return{bg:'#0f2010',color:'#60c060',border:'#1e4020'};
   if(verdict==='CAUTION')return{bg:'#0e1a20',color:'#60a0c0',border:'#1a3040'};
-  if(verdict==='MODERATE')return{bg:'#1e1510',color:'#e0a040',border:'#3d2a10'};
-  if(verdict==='DO NOT MERGE')return{bg:'#1e1010',color:'#f07070',border:'#3d1515'};
+  if(verdict==='HIGH_RISK')return{bg:'#1e1510',color:'#e0a040',border:'#3d2a10'};
+  if(verdict==='DO_NOT_MERGE')return{bg:'#2a0a0a',color:'#ff4444',border:'#5a1010'};
   return{bg:'#2a0a0a',color:'#ff4444',border:'#5a1010'};
 }
 function renderResult(result){
@@ -417,7 +417,10 @@ function renderResult(result){
     <div class="result-body">
       <div style="background:${v.bg};border:0.5px solid ${v.border};border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:18px;font-weight:700;color:${v.color};letter-spacing:0.05em;">${result.merge_verdict}</span>
-        <span style="font-size:12px;color:${v.color};opacity:0.8;">Risk Score: ${result.risk_score}/100</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+          <span style="font-size:12px;color:${v.color};opacity:0.8;">Risk Score: ${result.risk_score}/100</span>
+          <span style="font-size:11px;color:${v.color};opacity:0.6;">Confidence: ${Math.round((result.confidence_score||0)*100)}%</span>
+        </div>
       </div>
       <div class="section" style="border-color:#2a2a2e;">
         <div class="section-head" style="background:#111114;color:#a0a0b0;">Summary</div>
