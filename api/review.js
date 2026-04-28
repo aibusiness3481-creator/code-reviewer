@@ -2,6 +2,17 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
 
+// Deterministic verdict engine — overrides whatever Claude returns
+function enforceVerdict(risk_score, confidence_score) {
+  const r = Math.min(100, Math.max(0, Number(risk_score) || 0));
+  const c = Math.min(1, Math.max(0, Number(confidence_score) || 0.5));
+
+  if (r >= 80 || (r > 70 && c > 0.85)) return 'DO_NOT_MERGE';
+  if (r >= 50) return 'HIGH_RISK';
+  if (r >= 20) return 'CAUTION';
+  return 'SAFE';
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -13,27 +24,28 @@ export default async function handler(req, res) {
   if (!code) return res.status(400).json({ error: 'No code provided' });
 
   // Check and enforce usage limit
+  let users = [];
   if (user_id) {
     const userRes = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${user_id}&select=usage_count`, { headers: SB_HEADERS });
-    const users = await userRes.json();
+    users = await userRes.json();
     if (users.length && users[0].usage_count >= 3) {
       return res.status(403).json({ error: 'Free limit reached' });
     }
   }
 
-  const prompt = `You are Mergly, a merge risk analyzer.
-Compare the MAIN BRANCH and PULL REQUEST code below and respond in JSON only with this exact structure:
-{"merge_verdict":"","risk_score":0,"summary":"","issues":[{"line":"","issue":"","impact":"","fix":""}],"simulation_report":""}
+  const prompt = `You are Mergly, a deterministic merge risk analyzer.
+Compare the MAIN BRANCH and PULL REQUEST code below and respond in JSON only. No markdown. No extra text.
 
-Rules:
-- risk_score 0-20: merge_verdict = "SAFE"
-- risk_score 21-40: merge_verdict = "CAUTION"
-- risk_score 41-60: merge_verdict = "MODERATE"
-- risk_score 61-80: merge_verdict = "DO NOT MERGE"
-- risk_score 81-100: merge_verdict = "CRITICAL"
-- Focus on runtime errors, undefined variables, logic breaks, security risks
-- Be specific: include file name and line number where identifiable
-- No extra text. JSON only.
+Required JSON structure:
+{"merge_verdict":"","confidence_score":0.0,"risk_score":0,"summary":"","issues":[{"line":"","issue":"","impact":"","fix":""}],"simulation_report":""}
+
+Scoring rules:
+- risk_score: integer 0-100 based on severity of issues found
+- confidence_score: float 0.0-1.0 representing your confidence in the analysis
+- merge_verdict: leave empty — it will be computed server-side
+- Focus on: runtime errors, undefined variables, broken logic, security vulnerabilities
+- Be specific: reference file name and line number where identifiable
+- If no issues found, return empty issues array and risk_score of 0
 
 ${lang && lang !== 'Auto-detect' ? `Language: ${lang}` : ''}
 ${code}`;
@@ -52,17 +64,23 @@ ${code}`;
         messages: [{ role: 'user', content: prompt }]
       })
     });
+
     const data = await response.json();
     if (data.error) return res.status(400).json({ error: data.error.message });
     const text = data.content.map(i => i.text || '').join('');
     const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    // Clamp and enforce deterministic verdict — never trust Claude's verdict directly
+    result.risk_score = Math.min(100, Math.max(0, Number(result.risk_score) || 0));
+    result.confidence_score = Math.min(1, Math.max(0, Number(result.confidence_score) || 0.5));
+    result.merge_verdict = enforceVerdict(result.risk_score, result.confidence_score);
 
     // Increment usage count
     if (user_id) {
       await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
         method: 'PATCH',
         headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ usage_count: (users?.[0]?.usage_count || 0) + 1 })
+        body: JSON.stringify({ usage_count: (users[0]?.usage_count || 0) + 1 })
       });
     }
 
